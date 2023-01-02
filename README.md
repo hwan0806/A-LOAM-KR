@@ -23,9 +23,6 @@ ROS Noetic. [ROS Installation](http://wiki.ros.org/ROS/Installation)
 ### 1.2. **Ceres Solver**
 Follow [Ceres Installation](http://ceres-solver.org/installation.html).
 
-### 1.3. **PCL**
-Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
-
 
 ## 2. Build A-LOAM
 Clone the repository and catkin_make:
