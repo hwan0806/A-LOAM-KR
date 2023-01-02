@@ -38,7 +38,7 @@ Clone the repository and catkin_make:
     source ~/catkin_ws/devel/setup.bash
 ```
 ### Build TroubleShooting
-<img src="https://github.com/hwan0806/A-LOAM-KR/blob/devel/picture/boost_error.png" width = 720 height = 55%/>
+<img src="https://github.com/hwan0806/A-LOAM-KR/blob/main/picture/boost_error.png" width = 720 height = 55%/>
 if there are any boost error like above, you may add CMAKE option.
 
 ```
