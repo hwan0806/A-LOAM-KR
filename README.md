@@ -1,4 +1,4 @@
-# A-LOAM-KR
+# A-LOAM-KR Comment branch
 
 ## A-LOAM STUDY with Korean Description
 This repository is for studying A-LOAM in [SPARO LAB](https://sites.google.com/view/sparo) 22-23 winter SLAM study with Korean Description.
