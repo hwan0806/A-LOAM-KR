@@ -61,7 +61,27 @@ Download [KITTI Odometry dataset](http://www.cvlibs.net/datasets/kitti/eval_odom
 ```
 <img src="https://github.com/HKUST-Aerial-Robotics/A-LOAM/blob/devel/picture/kitti_gif.gif" width = 732 height = 272 />
 
+## 5. Docker image support
+We support docker image 
 
-## 5.Acknowledgements
+Pull docker image by command.
+```
+    docker pull hwan0806/a-loam
+```
+
+run docker image by below command.
+```
+    nvidia-docker run --rm -it --gpus all --name <container name> --privileged --ipc=host --net host -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=unix$DISPLAY -v /root/.Xauthority:/root/.Xauthority --env="QT_X11_NO_MITSHM=1" hwan0806/a-loam
+```
+
+launch aloam in docker
+```
+    cd /catkin_ws
+    source devel/setup.bash
+    roslaunch aloam_velodyne aloam_velodyne_VLP_16.launch
+```
+
+
+## 6.Acknowledgements
 Thanks for LOAM(J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time) and [LOAM_NOTED](https://github.com/cuitaixiang/LOAM_NOTED).
 
