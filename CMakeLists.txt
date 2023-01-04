@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(aloam_velodyne)
 
-set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++14")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+set(CMAKE_BUILD_TYPE "Release")   # cmake 빌드 타입 설정 : Debug와 release로 나뉨 (RelWithDebInfo, MinSizeRel도 있는데, 아직 몰라도 됨)
+set(CMAKE_CXX_FLAGS "-std=c++14") # cpp 표준 설정. 최근 패키지들은 14로 하면 거진 돌아갈듯
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g") # release 빌드 타입 시, 추가 설정 : 
 
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
