@@ -509,7 +509,7 @@ int main(int argc, char **argv)
 
             // publish odometry
             nav_msgs::Odometry laserOdometry;
-            laserOdometry.header.frame_id = "camera_init";
+            laserOdometry.header.frame_id = "/camera_init";
             laserOdometry.child_frame_id = "/laser_odom";
             laserOdometry.header.stamp = ros::Time().fromSec(timeSurfPointsLessFlat);
             laserOdometry.pose.pose.orientation.x = q_w_curr.x();
