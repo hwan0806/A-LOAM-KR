@@ -83,15 +83,26 @@ bool PUB_EACH_LINE = false;
 double MINIMUM_RANGE = 0.1; 
 
 template <typename PointT>
+/**********************************
+
+Purpose :  Remove the points that are closer than the threshold.
+Input   :  cloud_in, thres
+Output  :  cloud_out
+Flow    :  1. make cloud_out in the form of cloud_in
+           2. if the distance of cloud_in is larger than threshold, cloud_out=cloud_in
+Note    :  What is cloud_in and cloud_out and their format.
+
+**********************************/
 void removeClosedPointCloud(const pcl::PointCloud<PointT> &cloud_in,
                               pcl::PointCloud<PointT> &cloud_out, float thres)
-{
+{   
+    // if cloud_in and cloud_out is different, revise cloud_out to cloud_in.
     if (&cloud_in != &cloud_out)
     {
         cloud_out.header = cloud_in.header;
         cloud_out.points.resize(cloud_in.points.size());
     }
-
+    // size_t = unsigned int (32 or 64 bit)
     size_t j = 0;
 
     for (size_t i = 0; i < cloud_in.points.size(); ++i)
@@ -111,6 +122,16 @@ void removeClosedPointCloud(const pcl::PointCloud<PointT> &cloud_in,
     cloud_out.is_dense = true;
 }
 
+
+/**********************************
+
+Purpose :  
+Input   :  
+Output  :  
+Flow    :  
+Note    :  
+
+**********************************/
 void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 {
     if (!systemInited)
@@ -130,14 +151,18 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     std::vector<int> scanEndInd(N_SCANS, 0);
 
     pcl::PointCloud<pcl::PointXYZ> laserCloudIn;
+    // point cloud format change : sensor_msgs::PointCloud2 -> pcl::PointCloud
+    // https://limhyungtae.github.io/2021-09-10-ROS-Point-Cloud-Library-(PCL)-2.-%ED%98%95%EB%B3%80%ED%99%98-toROSMsg,-fromROSMsg/
     pcl::fromROSMsg(*laserCloudMsg, laserCloudIn);
     std::vector<int> indices;
 
+    // 1. Remove NaN & closed pc
     pcl::removeNaNFromPointCloud(laserCloudIn, laserCloudIn, indices);
     removeClosedPointCloud(laserCloudIn, laserCloudIn, MINIMUM_RANGE);
 
 
     int cloudSize = laserCloudIn.points.size();
+    // 2. Coordinate conversion : ??? -> ???
     float startOri = -atan2(laserCloudIn.points[0].y, laserCloudIn.points[0].x);
     float endOri = -atan2(laserCloudIn.points[cloudSize - 1].y,
                           laserCloudIn.points[cloudSize - 1].x) +
@@ -155,8 +180,13 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
     bool halfPassed = false;
     int count = cloudSize;
+    // ******** what is this? ********
     PointType point;
+    // ******** how the value of N_SCANS is 16 not 0? ********
     std::vector<pcl::PointCloud<PointType>> laserCloudScans(N_SCANS);
+    // 3. Calculate scanId and assign intensity for every points
+    // input  : laserCloudIn point
+    // Output : laserCloudScans point has intensity
     for (int i = 0; i < cloudSize; i++)
     {
         point.x = laserCloudIn.points[i].x;
@@ -205,6 +235,8 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
         }
         //printf("angle %f scanID %d \n", angle, scanID);
 
+
+        // coordinate conversion : XYZ -> ZXY
         float ori = -atan2(point.y, point.x);
         if (!halfPassed)
         { 
@@ -244,6 +276,8 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     printf("points size %d \n", cloudSize);
 
     pcl::PointCloud<PointType>::Ptr laserCloud(new pcl::PointCloud<PointType>());
+    // ******** ??? ********
+    // 4-1. Make laserCloud from laserCloudScans & define scanStartInd, scanEndInd
     for (int i = 0; i < N_SCANS; i++)
     { 
         scanStartInd[i] = laserCloud->size() + 5;
@@ -252,6 +286,9 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     }
 
     printf("prepare time %f \n", t_prepare.toc());
+    // 4-2. Caculate smoothness
+    // input  :  laserCloud
+    // output :  cloudCurvature[i]
 
     for (int i = 5; i < cloudSize - 5; i++)
     { 
@@ -265,6 +302,11 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
         cloudLabel[i] = 0;
     }
 
+    // 5. Extract features
+    // note : cloudlabel == 2  :  sharp corner feature
+    //        cloudlabel == 1  :  less sharp corner feature
+    //        cloudlabel == 0  :  not assigned
+    //        cloudlabel == -1 :  planar feature
 
     TicToc t_pts;
 
@@ -275,7 +317,9 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
     float t_q_sort = 0;
     for (int i = 0; i < N_SCANS; i++)
-    {
+    {   
+        //  ******** ??? ********
+        //  5-1. divide into 6 subregion? not 4?
         if( scanEndInd[i] - scanStartInd[i] < 6)
             continue;
         pcl::PointCloud<PointType>::Ptr surfPointsLessFlatScan(new pcl::PointCloud<PointType>);
@@ -285,9 +329,11 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
             int ep = scanStartInd[i] + (scanEndInd[i] - scanStartInd[i]) * (j + 1) / 6 - 1;
 
             TicToc t_tmp;
+            // sorting : front : high c, rear : low c
             std::sort (cloudSortInd + sp, cloudSortInd + ep + 1, comp);
             t_q_sort += t_tmp.toc();
 
+            //  5-2. Extract edge features
             int largestPickedNum = 0;
             for (int k = ep; k >= sp; k--)
             {
@@ -313,6 +359,8 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                     {
                         break;
                     }
+                    //  to prevent picking the same pixel again.
+                    //  and to pick the feature evenly, doesn't use +- 10 index pixel again.
 
                     cloudNeighborPicked[ind] = 1; 
 
@@ -343,6 +391,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                 }
             }
 
+            //  5-2. Extract planar features
             int smallestPickedNum = 0;
             for (int k = sp; k <= ep; k++)
             {
