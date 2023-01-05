@@ -1,2 +1,4 @@
 .vscode/
 dataset/
+cmake-build-release/
+.idea/

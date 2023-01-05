@@ -10,6 +10,7 @@
 class TicToc
 {
   public:
+    // 생성자 : 시작 시간 측정
     TicToc()
     {
         tic();
@@ -20,11 +21,12 @@ class TicToc
         start = std::chrono::system_clock::now();
     }
 
+    // duration :: https://en.cppreference.com/w/cpp/chrono/duration
     double toc()
     {
         end = std::chrono::system_clock::now();
-        std::chrono::duration<double> elapsed_seconds = end - start;
-        return elapsed_seconds.count() * 1000;
+        std::chrono::duration<double> elapsed_seconds = end - start;  // duration 기준을 안정했다면, duration은 1초 기준으로 설정됨
+        return elapsed_seconds.count() * 1000;  // 1 tick = 1초
     }
 
   private:

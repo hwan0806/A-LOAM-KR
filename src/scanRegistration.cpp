@@ -84,6 +84,7 @@ bool PUB_EACH_LINE = false;
 
 double MINIMUM_RANGE = 0.1; 
 
+// template
 template <typename PointT>
 
 
@@ -100,6 +101,7 @@ Note    :  What is cloud_in and cloud_out and their format.
 void removeClosedPointCloud(const pcl::PointCloud<PointT> &cloud_in,
                               pcl::PointCloud<PointT> &cloud_out, float thres)
 {
+    // main문에서 동일한 변수를 할당한다면, cloud_in과 cloud_out이 다를 수가 있나?? 어떤 이유로 예외처리 하는지..?
     // if cloud_in and cloud_out is different, revise cloud_out to cloud_in.
     if (&cloud_in != &cloud_out)
     {
@@ -109,6 +111,7 @@ void removeClosedPointCloud(const pcl::PointCloud<PointT> &cloud_in,
     // size_t = unsigned int (32 or 64 bit)
     size_t j = 0;
 
+    /// 거리 계산 : r^2 = x^2 + y^2 + z^2
     for (size_t i = 0; i < cloud_in.points.size(); ++i)
     {
         if (cloud_in.points[i].x * cloud_in.points[i].x + cloud_in.points[i].y * cloud_in.points[i].y + cloud_in.points[i].z * cloud_in.points[i].z < thres * thres)
@@ -121,8 +124,10 @@ void removeClosedPointCloud(const pcl::PointCloud<PointT> &cloud_in,
         cloud_out.points.resize(j);
     }
 
+    // cloud_out이라는 변수에
     cloud_out.height = 1;
-    cloud_out.width = static_cast<uint32_t>(j);
+    /// static cast : https://blockdmask.tistory.com/236
+    cloud_out.width = static_cast<uint32_t>(j); // 강제 형 변환
     cloud_out.is_dense = true;
 }
 
@@ -136,9 +141,12 @@ Flow    :
 Note    :  
 
 **********************************/
+// main문에서 laserCloudHandler는 PointCloud2 메시지 자체를 subscribe하는데, 함수 정의부에선 매개변수가 PointCloud2ConstPtr로 정의됨??
+// => 함수 호출 시, 원형 명시 X. laserCloudHandler는 원래 pointer 매개변수를 받는 함수임.
 void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 {
-    if (!systemInited)
+    // system 시작 여부에 대해 결정??
+    if (!systemInited)  // systemInited : false
     { 
         systemInitCount++;
         if (systemInitCount >= systemDelay)
@@ -154,6 +162,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     std::vector<int> scanStartInd(N_SCANS, 0);
     std::vector<int> scanEndInd(N_SCANS, 0);
 
+    //PointCloud 객체 => template 형식으로 받아
     pcl::PointCloud<pcl::PointXYZ> laserCloudIn;
     // point cloud format change : sensor_msgs::PointCloud2 -> pcl::PointCloud
     // https://limhyungtae.github.io/2021-09-10-ROS-Point-Cloud-Library-(PCL)-2.-%ED%98%95%EB%B3%80%ED%99%98-toROSMsg,-fromROSMsg/
@@ -508,7 +517,9 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
 int main(int argc, char **argv)
 {
+    // ros namespace의 init : ros master에 현재 프로세스를 노드로 등록하기 위한 함수
     ros::init(argc, argv, "scanRegistration");
+    // NodeHandle 클래스 : 노드의 특성 가짐 => sub, pub 할 수 있는 주체 + param 및 서비스 통
     ros::NodeHandle nh;
 
     nh.param<int>("scan_line", N_SCANS, 16);
@@ -525,6 +536,8 @@ int main(int argc, char **argv)
 
     ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 100, laserCloudHandler);
 
+
+    // 아래 publish 되는 변수들은 코드 젤 윗부분에서 전역적으로 미리 선언됨.
     pubLaserCloud = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_cloud_2", 100);
 
     pubCornerPointsSharp = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_sharp", 100);
@@ -537,6 +550,8 @@ int main(int argc, char **argv)
 
     pubRemovePoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_remove_points", 100);
 
+
+    // PUB_EACH_LINE = 0 : 아래 if문 안돌아감.
     if(PUB_EACH_LINE)
     {
         for(int i = 0; i < N_SCANS; i++)

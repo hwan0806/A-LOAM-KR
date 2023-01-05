@@ -40,6 +40,7 @@
 
 #include <pcl/point_types.h>
 
+// PointType 이라는 임의 자료형 설정 => pcl의 PointXYZI 
 typedef pcl::PointXYZI PointType;
 
 inline double rad2deg(double radians)
