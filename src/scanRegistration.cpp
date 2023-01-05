@@ -143,6 +143,7 @@ Note    :
 **********************************/
 // main문에서 laserCloudHandler는 PointCloud2 메시지 자체를 subscribe하는데, 함수 정의부에선 매개변수가 PointCloud2ConstPtr로 정의됨??
 // => 함수 호출 시, 원형 명시 X. laserCloudHandler는 원래 pointer 매개변수를 받는 함수임.
+// 씨피피는 포인터를 받음
 void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 {
     // system 시작 여부에 대해 결정??
@@ -159,6 +160,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
     TicToc t_whole;
     TicToc t_prepare;
+    // N_SCANS 크기의 벡터 생성 and 0으로 초기화 : vector grammmmar
     std::vector<int> scanStartInd(N_SCANS, 0);
     std::vector<int> scanEndInd(N_SCANS, 0);
 
@@ -167,6 +169,8 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     // point cloud format change : sensor_msgs::PointCloud2 -> pcl::PointCloud
     // https://limhyungtae.github.io/2021-09-10-ROS-Point-Cloud-Library-(PCL)-2.-%ED%98%95%EB%B3%80%ED%99%98-toROSMsg,-fromROSMsg/
     pcl::fromROSMsg(*laserCloudMsg, laserCloudIn);
+
+    // ??
     std::vector<int> indices;
 
     // 1. Remove NaN & closed pc
@@ -175,6 +179,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
 
     int cloudSize = laserCloudIn.points.size();
+    
     // 2. Coordinate conversion : ??? -> ???
     float startOri = -atan2(laserCloudIn.points[0].y, laserCloudIn.points[0].x);
     float endOri = -atan2(laserCloudIn.points[cloudSize - 1].y,
