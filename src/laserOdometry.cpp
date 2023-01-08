@@ -57,16 +57,20 @@
 #include "lidarFactor.hpp"
 
 #define DISTORTION 0
-
+/***
+ * * #define은 지시문으로써 DISTORTION이 나타날 때 마다 0으로 바꾸는 역할을 한다. -> 즉, 그냥 전역변수라는 소린가?
+ * * 그렇다면, 여기서 의문점/ 그냥 변수처럼 사용하면 안될까?
+ * * 프로그램의 가독성을 높여주고, 유지보수도 용이하게 해주는 역할이라고 함. 또한, 변수를 사용하는 것보다 처리속도 또한 빠르다고 함.
+*/
 int corner_correspondence = 0, plane_correspondence = 0;
-'''
-// const란?
-//    변수를 상수화 하기 위해 사용됨.
-//    여기서 상수란, 데이터의 초기화가 이루어지면, 그 값을 바꿀 수 없도록 하는 것임.
-// constexpr이란?
-//    const는 변수의 초기화를 런타임까지 지연시킬 수 있는 반면, constexpr 변수는 반드시 컴파일 타임에 초기화 되어 있어야 함.
-// --> 무슨 말인지 잘 모르겠음...
-'''
+/***
+ * * const란?
+ * *     변수를 상수화 하기 위해 사용됨.
+ * *     여기서 상수란, 데이터의 초기화가 이루어지면, 그 값을 바꿀 수 없도록 하는 것임.
+ * *  constexpr이란?
+ * *     const는 변수의 초기화를 런타임까지 지연시킬 수 있는 반면, constexpr 변수는 반드시 컴파일 타임에 초기화 되어 있어야 함.
+ * *  무슨 말인지 잘 모르겠음...
+*/
 
 constexpr double SCAN_PERIOD = 0.1;
 constexpr double DISTANCE_SQ_THRESHOLD = 25;
@@ -258,34 +262,43 @@ int main(int argc, char **argv)
 
     int frameCount = 0;
     ros::Rate rate(100);
-    // ros::Rate는 반복하고자하는 주기를 설정하게 된다. rate에 지정한 변수의 주기를 지키기 위해 하단의 sleep을 이용한다.
-    
+    /**
+     * * ros::Rate는 반복하고자하는 주기를 설정하게 된다. rate에 지정한 변수의 주기를 지키기 위해 하단의 sleep을 이용한다.
+    */
     while (ros::ok())
-    // ros::ok가 False가 되는 경우는 다음과 같다.
-    // 1. Ctrl+C의 입력을 받았을 경우
-    // 2. 동일한 이름의 다른 노드로 인해 충돌이 발생한 경우
-    // 3. 다른 부분에서 ros::shutdown()이 호출된 경우
-    // 4. 모든 ros::NodeHandles가 종료된 경우
-    // 참고 : ros::ok()가 한번 False를 받으면, 다시 사용할 수 없다.
+    /**
+    * * ros::ok가 False가 되는 경우는 다음과 같다.
+    * * 1. Ctrl+C의 입력을 받았을 경우
+    * * 2. 동일한 이름의 다른 노드로 인해 충돌이 발생한 경우
+    * * 3. 다른 부분에서 ros::shutdown()이 호출된 경우
+    * * 4. 모든 ros::NodeHandles가 종료된 경우
+    * * 참고 : ros::ok()가 한번 False를 받으면, 다시 사용할 수 없다.
+    */
     {
         ros::spinOnce();
-        // 큐에 요청된 콜백함수를 처리한다.
-        // ros::spinOnce()는 현재까지 요청된 콜백 함수를 모두 호출하고 코드의 다음부분으로 넘어가지만,
-        // ros::spin은 노드가 shutdown되거나 ctrl+C로 정지되기 이전까지 
+        /**
+        * * 큐에 요청된 콜백함수를 처리한다.
+        * * ros::spinOnce()는 현재까지 요청된 콜백 함수를 모두 호출하고 코드의 다음부분으로 넘어가지만,
+        * * ros::spin은 노드가 shutdown되거나 ctrl+C로 정지되기 이전까지 
+        */
 
         if (!cornerSharpBuf.empty() && !cornerLessSharpBuf.empty() &&
             !surfFlatBuf.empty() && !surfLessFlatBuf.empty() &&
             !fullPointsBuf.empty())
-        // 위에서 각 변수를 PointCloud2 type의 queue로 정의하였고, PointColud2가 empty가 아닐 경우를 의미한다.
-        // 즉, message가 들어온 경우를 의미한다.
+        /**
+        * * 위에서 각 변수를 PointCloud2 type의 queue로 정의하였고, PointColud2가 empty가 아닐 경우를 의미한다.
+        * * 즉, message가 들어온 경우를 의미한다.
+        */
         {
             timeCornerPointsSharp = cornerSharpBuf.front()->header.stamp.toSec();
             timeCornerPointsLessSharp = cornerLessSharpBuf.front()->header.stamp.toSec();
             timeSurfPointsFlat = surfFlatBuf.front()->header.stamp.toSec();
             timeSurfPointsLessFlat = surfLessFlatBuf.front()->header.stamp.toSec();
             timeLaserCloudFullRes = fullPointsBuf.front()->header.stamp.toSec();
-            // PointCloud2 mesaage 안에 있는 header.stamp.toSec()를 이용해 각 point들이 들어온 시점을 알 수 있고,
-            // 이를 timeCornerSharp라는 변수로 정의한다.
+            /**
+            * * PointCloud2 mesaage 안에 있는 header.stamp.toSec()를 이용해 각 point들이 들어온 시점을 알 수 있고,
+            * * 이를 timeCornerSharp라는 변수로 정의한다.
+            */
 
             if (timeCornerPointsSharp != timeLaserCloudFullRes ||
                 timeCornerPointsLessSharp != timeLaserCloudFullRes ||
@@ -295,57 +308,75 @@ int main(int argc, char **argv)
                 printf("unsync messeage!");
                 ROS_BREAK();
             }
-            // 모든 PointCloud message의 time과 각각의 Edge, Planar point들의 time이 다르면
-            // 비동기화된 것으로 보고, 프로그램을 멈춘다.
+            /**
+            * * 모든 PointCloud message의 time과 각각의 Edge, Planar point들의 time이 다르면
+            * * 비동기화된 것으로 보고, 프로그램을 멈춘다.
+            */
             /**
              * *교수님께 여쭤보기
             */
 
             mBuf.lock();
-            // mutex를 lock 시켜 다른 쓰레드의 접근을 막음
+            /**
+             * * mutex를 lock 시켜 다른 쓰레드의 접근을 막음
+            */ 
             cornerPointsSharp->clear();
-            // pcl::pointcloud의 clear 함수를 의미하고, 이는 들어있는 pointcloud set을 제거하고,
-            // pointcloud의 height와 width를 0으로 맞춰주는 작업이다. -> 즉, pointcloud의 initialization 과정이다.
-            // 위의 cornerSharpBuf와 혼동할 수도 있는데, 여기서 cornerSharpBuf는 Pointcloud2 type으로 정의된 queue이며,
-            // queue에서는 clear를 지원하지 않는다.
+            /**
+            * * pcl::pointcloud의 clear 함수를 의미하고, 이는 들어있는 pointcloud set을 제거하고,
+            * * pointcloud의 height와 width를 0으로 맞춰주는 작업이다. -> 즉, pointcloud의 initialization 과정이다.
+            * * 위의 cornerSharpBuf와 혼동할 수도 있는데, 여기서 cornerSharpBuf는 Pointcloud2 type으로 정의된 queue이며,
+            * * queue에서는 clear를 지원하지 않는다.
+            */
             pcl::fromROSMsg(*cornerSharpBuf.front(), *cornerPointsSharp);
-            // ROS에서 통신을 주고받을 때에는, PointCloud2 형식으로 해야한다. 하지만, 이 data를 처리하기 위해서는
-            // pcl::PointCloud 형식으로 바꾸어야하고, 이를 진행하는 과정이다.
-            // 즉, corenerSharpBuf.front()의 형식을 cornerPointsSharp의 형식으로 형 변환을 시켜주는 과정이다.
-            // 참고  : https://limhyungtae.github.io/2021-09-10-ROS-Point-Cloud-Library-(PCL)-2.-%ED%98%95%EB%B3%80%ED%99%98-toROSMsg,-fromROSMsg/
+            /**
+            * * ROS에서 통신을 주고받을 때에는, PointCloud2 형식으로 해야한다. 하지만, 이 data를 처리하기 위해서는
+            * * pcl::PointCloud 형식으로 바꾸어야하고, 이를 진행하는 과정이다.
+            * * 즉, corenerSharpBuf.front()의 형식을 cornerPointsSharp의 형식으로 형 변환을 시켜주는 과정이다.
+            * ? 참고 : https://limhyungtae.github.io/2021-09-10-ROS-Point-Cloud-Library-(PCL)-2.-%ED%98%95%EB%B3%80%ED%99%98-toROSMsg,-fromROSMsg/
+            */
             cornerSharpBuf.pop();
-            // 이후, 형 변환을 시키고 남은 queue를 비운다 -> 아마 추정하기로는 메모리 상의 효율?이 아닐까?
-
+            /**
+            * * 이후, 형 변환을 시키고 남은 queue를 비운다 -> 아마 추정하기로는 메모리 상의 효율?이 아닐까?
+            */
             cornerPointsLessSharp->clear();
             pcl::fromROSMsg(*cornerLessSharpBuf.front(), *cornerPointsLessSharp);
             cornerLessSharpBuf.pop();
-            // 위의 내용과 같음
-
+            /**
+            * * 위의 내용과 같음
+            */
             surfPointsFlat->clear();
             pcl::fromROSMsg(*surfFlatBuf.front(), *surfPointsFlat);
             surfFlatBuf.pop();
-            // 위의 내용과 같음
-
+            /**
+            * * 위의 내용과 같음
+            */
             surfPointsLessFlat->clear();
             pcl::fromROSMsg(*surfLessFlatBuf.front(), *surfPointsLessFlat);
             surfLessFlatBuf.pop();
-            // 위의 내용과 같음
-
+            /**
+            * * 위의 내용과 같음
+            */
             laserCloudFullRes->clear();
             pcl::fromROSMsg(*fullPointsBuf.front(), *laserCloudFullRes);
             fullPointsBuf.pop();
-            // 위의 내용과 같음
-
+            /**
+            * * 위의 내용과 같음
+            */
             mBuf.unlock();
-            // mutex를 unlock 시켜 다음 쓰레드가 들어올 수 있도록 함.
-
+            /**
+             * * mutex를 unlock 시켜 다음 쓰레드가 들어올 수 있도록 함.
+             */ 
             TicToc t_whole;
-            // c++의 timer라고 생각하면 됨. 여기서 tic은 시작점을 측정하고, toc은 도착점을 측정함.
+            /**
+             * * c++의 timer라고 생각하면 됨. 여기서 tic은 시작점을 측정하고, toc은 도착점을 측정함.
+             */
 
             // initializing
             if (!systemInited)
-            // 처음에 systemInited는 False라고 설정되어있음.
-            // 즉, 처음 시작할 때 systemInited를 True로 바꾸고, 계속 진행함.
+            /**
+             * * 처음에 systemInited는 False라고 설정되어있음.
+             * * 즉, 처음 시작할 때 systemInited를 True로 바꾸고, 계속 진행함.
+             */
             {
                 systemInited = true;
                 std::cout << "Initialization finished \n";
@@ -354,40 +385,50 @@ int main(int argc, char **argv)
             {
                 int cornerPointsSharpNum = cornerPointsSharp->points.size();
                 int surfPointsFlatNum = surfPointsFlat->points.size();
-                // Edge, Planar point들, 각각의 point의 개수를 의미
+                /**
+                 * * Edge, Planar point들, 각각의 point의 개수를 의미
+                */
                 TicToc t_opt;
-                // 위의 TicToc과 동일
+                /**
+                * * 위의 TicToc 내용과 같음
+                */
 
                 for (size_t opti_counter = 0; opti_counter < 2; ++opti_counter)
-                // 최적화를 2번 진행함.
+                /** 
+                 * 최적화를 2번 진행함.
+                 */
                 {
                     corner_correspondence = 0;
                     plane_correspondence = 0;
 
                     //ceres::LossFunction *loss_function = NULL;
                     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
-                    // 먼저 ceres에 사용되는 loss fuction는 HuberLoss를 사용한다.
-                    // Huber loss (후버 손실) 이란 MSE(Mean Square Error) 와 MAE(Mean Absolute Error)를 절충한 함수이다.
-                    // 어떠한 일정한 범위를 정해서 그 안에 있으면, 오차를 제곱하고, 그 밖에 있으면 오차의 절대값을 구하는 방식이며,
-                    // 일정한 범위 내에 있을 때, 오차에 0.5를 곱해주는데 이는 두 함수가 만날 때, smooth 정도를 고려하기 위해서이다.
-                    // 참고 : http://doc.mindscale.kr/km/data_mining/dm02.html
-                    // 또한, 여기서 new 변수를 알기위해서는 동적할당을 알아야한다.
-                    // 먼저 동적할당에 대해 이야기 하기 전에, C++의 세가지 기본 타입의 메모리 할당에 대해 알아본다.
-                    // 1. 정적 메모리 할당
-                    //      정적 변수와 전역 변수에 대해 발생하며, 이러한 타입의 변수에 대한 메모리는 실행할 때, 한 번 할당되며, 프로그램이 끝날 때까지 지속된다.
-                    // 2. 지동 메모리 할당
-                    //      함수 매개 변수와 지역 변수에 대해 발생하며, 이러한 타입의 변수에 대한 메모리는 관련 블록을 입력할 때, 할당되고, 블록을 종료할 때 필요에 따라 여러 번 해제할 수 있다.
-                    // 위의 두가지 메모리 할당은 변수 및 배열의 크기는 컴파일 타임에 알아야 한다는 것과, 할당 및 해체가 자동으로 수행된다는 공통점이 있다.
-                    // 하지만, 사용자가 입력을 처리할 때, 이러한 제약 조건으로 인해 문제가 발생하는 상황이 생길 수 있다.
-                    // 예를 들면, 문자열을 사용하여 누군가의 이름은 정할 수 있지만, 이름의 길이를 알 수 없다.
-                    // 따라서 변수의 최대 크기를 추측하고, 가정하는 방법을 이용하지만, 크게 2가지 문제가 있다.
-                    // 1. 변수가 실제로 사용되지 않으면 낭비되는 메모리가 많다.
-                    // 2. 대부분의 일반 변수는 stack에 할당되고, 기본적으로 설정된 메모리 정도를 초과하면 overflow가 발생하고, 운영체제가 프로그램을 강제로 종료하게 된다.
-                    // 즉, 많은 프로그램을 다루는 프로그램에서는 문제가 발생한다.
-                    '''
-                    근데 왜 loss function을 동적 메모리에 할당하는 거지? 들어오는 변수가 계속 바뀌어서 그런건가?
-                    '''
-                    // 참고 : https://boycoding.tistory.com/204
+                    /**
+                     * * // 먼저 ceres에 사용되는 loss fuction는 HuberLoss를 사용한다.
+                     * * Huber loss (후버 손실) 이란 MSE(Mean Square Error) 와 MAE(Mean Absolute Error)를 절충한 함수이다.
+                     * * 어떠한 일정한 범위를 정해서 그 안에 있으면, 오차를 제곱하고, 그 밖에 있으면 오차의 절대값을 구하는 방식이며,
+                     * * 일정한 범위 내에 있을 때, 오차에 0.5를 곱해주는데 이는 두 함수가 만날 때, smooth 정도를 고려하기 위해서이다.
+                     * ? 참고 : http://doc.mindscale.kr/km/data_mining/dm02.html
+                     * * 또한, 여기서 new 변수를 알기위해서는 동적할당을 알아야한다.
+                     * * 먼저 동적할당에 대해 이야기 하기 전에, C++의 세가지 기본 타입의 메모리 할당에 대해 알아본다.
+                     * * 1. 정적 메모리 할당
+                     * *      정적 변수와 전역 변수에 대해 발생하며, 이러한 타입의 변수에 대한 메모리는 실행할 때, 한 번 할당되며, 프로그램이 끝날 때까지 지속된다.
+                     * * 2. 지동 메모리 할당
+                     * *      함수 매개 변수와 지역 변수에 대해 발생하며, 이러한 타입의 변수에 대한 메모리는 관련 블록을 입력할 때, 할당되고, 블록을 종료할 때 필요에 따라 여러 번 해제할 수 있다.
+                     * * 위의 두가지 메모리 할당은 변수 및 배열의 크기는 컴파일 타임에 알아야 한다는 것과, 할당 및 해체가 자동으로 수행된다는 공통점이 있다.
+                     * * 하지만, 사용자가 입력을 처리할 때, 이러한 제약 조건으로 인해 문제가 발생하는 상황이 생길 수 있다.
+                     * * 예를 들면, 문자열을 사용하여 누군가의 이름은 정할 수 있지만, 이름의 길이를 알 수 없다.
+                     * * 따라서 변수의 최대 크기를 추측하고, 가정하는 방법을 이용하지만, 크게 2가지 문제가 있다.
+                     * * 1. 변수가 실제로 사용되지 않으면 낭비되는 메모리가 많다.
+                     * * 2. 대부분의 일반 변수는 stack에 할당되고, 기본적으로 설정된 메모리 정도를 초과하면 overflow가 발생하고, 운영체제가 프로그램을 강제로 종료하게 된다.
+                     * * 즉, 많은 프로그램을 다루는 프로그램에서는 문제가 발생한다.
+                    */
+                    /**
+                     * ! 근데 왜 loss function을 동적 메모리에 할당하는 거지? 들어오는 변수가 계속 바뀌어서 그런건가?
+                    */
+                   /**
+                    * ? 참고 : https://boycoding.tistory.com/204
+                   */
 
                     ceres::LocalParameterization *q_parameterization =
                         new ceres::EigenQuaternionParameterization();
