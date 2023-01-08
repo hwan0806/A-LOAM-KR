@@ -446,28 +446,68 @@ int main(int argc, char **argv)
 
                     TicToc t_data;
                     // find correspondence for corner features
+                    /**
+                     * * corner features들 간의 correspondence 찾기
+                    */
                     for (int i = 0; i < cornerPointsSharpNum; ++i)
+                    /**
+                     * * cornerPoint의 개수만큼 iteration
+                    */
                     {
                         TransformToStart(&(cornerPointsSharp->points[i]), &pointSel);
+                        /**
+                         * * 위에서 정의한 quaternion(para_q)과 translation(para_t)를 이용해 point들에 Transformation 적용
+                        */
                         kdtreeCornerLast->nearestKSearch(pointSel, 1, pointSearchInd, pointSearchSqDis);
-
+                        /**
+                         * * pointSel이 query point가 됨.
+                         * * pointcloud 상에서 기준 point(query point)를 기준으로부터 가장 가까운 k개의 point의 index를 return 해줌.
+                         * * 사용방법 : nearestKSearch(query, N, idxes, sqr_dists) -> 즉, query와 가까운 N개의 point들의 idxes와 sqr_dists를 return하는 것이다.
+                         * ? 참고 : https://limhyungtae.github.io/2021-09-12-ROS-Point-Cloud-Library-(PCL)-9.-KdTree%EB%A5%BC-%ED%99%9C%EC%9A%A9%ED%95%9C-K-nearest-Neighbor-Search-(KNN)/
+                        */
                         int closestPointInd = -1, minPointInd2 = -1;
+                        /**
+                         * * 각 변수를 -1로 정의함.
+                         * ! 왜...?! // 아마 Ind가 0부터 시작하니까 겹치지 않기 위해서?
+                        */ 
                         if (pointSearchSqDis[0] < DISTANCE_SQ_THRESHOLD)
+                        /**
+                         * * query point와의 거리가 thershold보다 가까울 경우를 의미함.
+                         * * 위에서 이는 25로 정의되어있음.
+                        */
                         {
                             closestPointInd = pointSearchInd[0];
+                            /**
+                             * * 가장 가까운 point의 index를 return받은 index로 정의
+                            */
                             int closestPointScanID = int(laserCloudCornerLast->points[closestPointInd].intensity);
-
+                            /**
+                             * * 가장 가까운 point의 intensity값으로 scanid 정의
+                            */
                             double minPointSqDis2 = DISTANCE_SQ_THRESHOLD;
+                            /**
+                             * * 위에서 정의된 threshold를 다른 이름으로 정의함.
+                            */
                             // search in the direction of increasing scan line
                             for (int j = closestPointInd + 1; j < (int)laserCloudCornerLast->points.size(); ++j)
+                            /**
+                             * * 가장 가까운 point의 index부터, 전체 point들의 개수까지 iteration -> 즉, 가장 가까운 index들보다 큰 index만 iteration한다는건데, 정렬이 되어 있는 건가?
+                            */
                             {
                                 // if in the same scan line, continue
                                 if (int(laserCloudCornerLast->points[j].intensity) <= closestPointScanID)
                                     continue;
+                                /**
+                                 * * 같은 channel의 point이면 loop의 끝으로 이동시킨다. -> 즉, 그럼 같은 channel의 point들은 closetpoint로 간주하지 않는다.
+                                 * ! 왜...?!
+                                */
 
                                 // if not in nearby scans, end the loop
                                 if (int(laserCloudCornerLast->points[j].intensity) > (closestPointScanID + NEARBY_SCAN))
                                     break;
+                                /**
+                                 * * NEARBY_SCAN이라는 변수를 이용해 Threshold를 정하고, point들이 정한 Thershold보다 멀면, loop를 종료한다.
+                                */
 
                                 double pointSqDis = (laserCloudCornerLast->points[j].x - pointSel.x) *
                                                         (laserCloudCornerLast->points[j].x - pointSel.x) +
@@ -475,54 +515,102 @@ int main(int argc, char **argv)
                                                         (laserCloudCornerLast->points[j].y - pointSel.y) +
                                                     (laserCloudCornerLast->points[j].z - pointSel.z) *
                                                         (laserCloudCornerLast->points[j].z - pointSel.z);
-
+                                /**
+                                 * * pointSel이 query point이기 때문에 query point와의 거리를 의미함.
+                                */
                                 if (pointSqDis < minPointSqDis2)
+                                /**
+                                 * * 위에서 지정한 DISTANCE_SQ_THRESHOLD의 값보다 작으면 correspondence로 인정한다는 의미이다.
+                                */
                                 {
                                     // find nearer point
                                     minPointSqDis2 = pointSqDis;
+                                    /**
+                                     * * 위에서 계산한 거리 값을 disatnce로 정의
+                                    */
                                     minPointInd2 = j;
+                                    /**
+                                     * * 가장 가까울 때, iteration하고 있는 number j를 가장 가까울 때의 index로 정의
+                                    */
                                 }
                             }
 
                             // search in the direction of decreasing scan line
                             for (int j = closestPointInd - 1; j >= 0; --j)
+                            /**
+                             * * 바로 위의 for문은 같은 scan line에서 위의 index를 보았다면, 여기서는 밑의 index를 확인한다.
+                             * ! 왜 이런식으로 구성하였을까?!
+                            */
                             {
                                 // if in the same scan line, continue
                                 if (int(laserCloudCornerLast->points[j].intensity) >= closestPointScanID)
                                     continue;
+                                /**
+                                 * * 위와 동일
+                                */
 
                                 // if not in nearby scans, end the loop
                                 if (int(laserCloudCornerLast->points[j].intensity) < (closestPointScanID - NEARBY_SCAN))
                                     break;
-
+                                /**
+                                 * * 위와 동일
+                                */
                                 double pointSqDis = (laserCloudCornerLast->points[j].x - pointSel.x) *
                                                         (laserCloudCornerLast->points[j].x - pointSel.x) +
                                                     (laserCloudCornerLast->points[j].y - pointSel.y) *
                                                         (laserCloudCornerLast->points[j].y - pointSel.y) +
                                                     (laserCloudCornerLast->points[j].z - pointSel.z) *
                                                         (laserCloudCornerLast->points[j].z - pointSel.z);
-
+                                /**
+                                 * * 위와 동일
+                                */
                                 if (pointSqDis < minPointSqDis2)
                                 {
                                     // find nearer point
                                     minPointSqDis2 = pointSqDis;
                                     minPointInd2 = j;
                                 }
+                                /**
+                                 * * 위와 동일
+                                */
                             }
                         }
+                        /**
+                         * * 먼저 KNN-search를 이용해 가장 가까운 point를 찾는다.
+                         * * 이후, 가장 가까운 point와 가장 가까운 index의 number minPointInd2와 그 때의 distance minPointSqDis2를 찾는다.
+                         * * 즉, 논문에서 이야기하고 있는, l, m, n 찾아서 확인하는 부분인듯?
+                        */
                         if (minPointInd2 >= 0) // both closestPointInd and minPointInd2 is valid
+                        /**
+                         * * 위에서 minPointInd2를 -1로 정의하였기 때문에, 위의 조건문을 거치지 않으면, 여기의 조건문 또한 거치지 않게됨.
+                         * * 즉, 위의 조건문을 거쳤다면, 즉, 가장 가까운 point와 그 point에 대해서 가까운 point도 찾았다는 의미가 됨.
+                        */
                         {
                             Eigen::Vector3d curr_point(cornerPointsSharp->points[i].x,
                                                        cornerPointsSharp->points[i].y,
                                                        cornerPointsSharp->points[i].z);
+                            /**
+                             * * curr_point에 현재 point의 x, y, z 값을 넣음.
+                            */
+                            
                             Eigen::Vector3d last_point_a(laserCloudCornerLast->points[closestPointInd].x,
                                                          laserCloudCornerLast->points[closestPointInd].y,
                                                          laserCloudCornerLast->points[closestPointInd].z);
+                            /**
+                             * * 현재 point와 가장 가까운 point를 last_point_a에 넣음.
+                            */
+                            
                             Eigen::Vector3d last_point_b(laserCloudCornerLast->points[minPointInd2].x,
                                                          laserCloudCornerLast->points[minPointInd2].y,
                                                          laserCloudCornerLast->points[minPointInd2].z);
+                            /**
+                             * * last_point_a에 가장 가까운 point를 last_point_b에 넣음.
+                            */
 
                             double s;
+                            /**
+                             * * s를 정의함.
+                            */
                             if (DISTORTION)
                                 s = (cornerPointsSharp->points[i].intensity - int(cornerPointsSharp->points[i].intensity)) / SCAN_PERIOD;
                             else
@@ -535,25 +623,55 @@ int main(int argc, char **argv)
 
                     // find correspondence for plane features
                     for (int i = 0; i < surfPointsFlatNum; ++i)
+                    /**
+                     * * planarPoint의 개수만큼 iteration
+                    */  
                     {
                         TransformToStart(&(surfPointsFlat->points[i]), &pointSel);
                         kdtreeSurfLast->nearestKSearch(pointSel, 1, pointSearchInd, pointSearchSqDis);
+                        /**
+                         * * pointSel이 query point가 됨.
+                         * * pointcloud 상에서 기준 point(query point)를 기준으로부터 가장 가까운 k개의 point의 index를 return 해줌.
+                         * * 사용방법 : nearestKSearch(query, N, idxes, sqr_dists) -> 즉, query와 가까운 N개의 point들의 idxes와 sqr_dists를 return하는 것이다.
+                        */
 
                         int closestPointInd = -1, minPointInd2 = -1, minPointInd3 = -1;
+                        /**
+                         * * 위와 동일
+                        */
                         if (pointSearchSqDis[0] < DISTANCE_SQ_THRESHOLD)
+                        /**
+                         * * DISTANCE_SQ_THRESHOLD보다 Distance가 적을 경우를 의미함.
+                        */
                         {
                             closestPointInd = pointSearchInd[0];
+                            /**
+                             * * 가장 가까운 point의 index를 return받은 index로 정의
+                            */
 
                             // get closest point's scan ID
                             int closestPointScanID = int(laserCloudSurfLast->points[closestPointInd].intensity);
+                            /**
+                             * * 가장 가까운 point의 intensity값으로 scanid 정의
+                            */
+
                             double minPointSqDis2 = DISTANCE_SQ_THRESHOLD, minPointSqDis3 = DISTANCE_SQ_THRESHOLD;
+                            /**
+                             * * 위에서 정의된 threshold를 다른 이름으로 정의함.
+                            */
 
                             // search in the direction of increasing scan line
                             for (int j = closestPointInd + 1; j < (int)laserCloudSurfLast->points.size(); ++j)
+                            /**
+                             * * 가장 가까운 point의 index부터, 전체 point들의 개수까지 iteration 
+                            */
                             {
                                 // if not in nearby scans, end the loop
                                 if (int(laserCloudSurfLast->points[j].intensity) > (closestPointScanID + NEARBY_SCAN))
                                     break;
+                                /**
+                                 * * NEARBY_SCAN이라는 변수를 이용해 Threshold를 정하고, point들이 정한 Thershold보다 멀면, loop를 종료한다. -> 즉, 너무 멀면 종료한다.
+                                */
 
                                 double pointSqDis = (laserCloudSurfLast->points[j].x - pointSel.x) *
                                                         (laserCloudSurfLast->points[j].x - pointSel.x) +
@@ -561,6 +679,9 @@ int main(int argc, char **argv)
                                                         (laserCloudSurfLast->points[j].y - pointSel.y) +
                                                     (laserCloudSurfLast->points[j].z - pointSel.z) *
                                                         (laserCloudSurfLast->points[j].z - pointSel.z);
+                                /**
+                                 * * pointSel이 query point이기 때문에 query point와의 거리를 의미함.
+                                */
 
                                 // if in the same or lower scan line
                                 if (int(laserCloudSurfLast->points[j].intensity) <= closestPointScanID && pointSqDis < minPointSqDis2)
@@ -568,20 +689,37 @@ int main(int argc, char **argv)
                                     minPointSqDis2 = pointSqDis;
                                     minPointInd2 = j;
                                 }
+                                /**
+                                 * * 현재 point의 scan line보다 같거나 낮은 곳에서
+                                 * * 위에서 찾은 현재 point와 가장 가까운 거리의 point의 channel보다 작고, 위에서 Threshold로 정의한 값보다 거리가 가까우면, planar surface point로 인정한다.
+                                */
+
                                 // if in the higher scan line
                                 else if (int(laserCloudSurfLast->points[j].intensity) > closestPointScanID && pointSqDis < minPointSqDis3)
                                 {
                                     minPointSqDis3 = pointSqDis;
                                     minPointInd3 = j;
                                 }
+                                /**
+                                 * * 현재 point의 scan line보다 높은 곳에서
+                                 * * 위에서 찾은 현재 point와 가장 가까운 거리의 point의 channel보다 작고, 위에서 Threshold로 정의한 값보다 거리가 가까우면, planar surface point로 인정한다.
+                                */
+
                             }
 
                             // search in the direction of decreasing scan line
                             for (int j = closestPointInd - 1; j >= 0; --j)
+                            /**
+                            * * 가장 가까운 point의 index부터, 전체 point들의 개수까지 iteration 
+                            */   
+                            
                             {
                                 // if not in nearby scans, end the loop
                                 if (int(laserCloudSurfLast->points[j].intensity) < (closestPointScanID - NEARBY_SCAN))
                                     break;
+                                /**
+                                 * * NEARBY_SCAN이라는 변수를 이용해 Threshold를 정하고, point들이 정한 Thershold보다 멀면, loop를 종료한다. -> 즉, 너무 멀면 종료한다.
+                                */
 
                                 double pointSqDis = (laserCloudSurfLast->points[j].x - pointSel.x) *
                                                         (laserCloudSurfLast->points[j].x - pointSel.x) +
@@ -589,36 +727,61 @@ int main(int argc, char **argv)
                                                         (laserCloudSurfLast->points[j].y - pointSel.y) +
                                                     (laserCloudSurfLast->points[j].z - pointSel.z) *
                                                         (laserCloudSurfLast->points[j].z - pointSel.z);
-
+                                /**
+                                 * * 위와 동일
+                                */
                                 // if in the same or higher scan line
                                 if (int(laserCloudSurfLast->points[j].intensity) >= closestPointScanID && pointSqDis < minPointSqDis2)
                                 {
                                     minPointSqDis2 = pointSqDis;
                                     minPointInd2 = j;
                                 }
+                                /**
+                                 * * 위와 동일
+                                */
                                 else if (int(laserCloudSurfLast->points[j].intensity) < closestPointScanID && pointSqDis < minPointSqDis3)
                                 {
                                     // find nearer point
                                     minPointSqDis3 = pointSqDis;
                                     minPointInd3 = j;
                                 }
+                                /**
+                                 * * 위와 동일
+                                */
                             }
 
                             if (minPointInd2 >= 0 && minPointInd3 >= 0)
+                            /**
+                             * * 위의 조건을 만족했다는 것을 의미
+                            */
                             {
 
                                 Eigen::Vector3d curr_point(surfPointsFlat->points[i].x,
                                                             surfPointsFlat->points[i].y,
                                                             surfPointsFlat->points[i].z);
+                                /**
+                                 * * 현재 point를 curr_point로 정의
+                                */
+
                                 Eigen::Vector3d last_point_a(laserCloudSurfLast->points[closestPointInd].x,
                                                                 laserCloudSurfLast->points[closestPointInd].y,
                                                                 laserCloudSurfLast->points[closestPointInd].z);
+                                /**
+                                 * * 현재 point에서 가장 가까운 point를 point_a로 정의
+                                */
                                 Eigen::Vector3d last_point_b(laserCloudSurfLast->points[minPointInd2].x,
                                                                 laserCloudSurfLast->points[minPointInd2].y,
                                                                 laserCloudSurfLast->points[minPointInd2].z);
+                                /**
+                                 * * point_a의 sacn line 보다 위에 있는 scan line 중 가장 가까운 것
+                                */
+
                                 Eigen::Vector3d last_point_c(laserCloudSurfLast->points[minPointInd3].x,
                                                                 laserCloudSurfLast->points[minPointInd3].y,
                                                                 laserCloudSurfLast->points[minPointInd3].z);
+                                /**
+                                 * * point_a의 sacn line 보다 밑에 있는 scan line 중 가장 가까운 것
+                                */
 
                                 double s;
                                 if (DISTORTION)
@@ -639,6 +802,9 @@ int main(int argc, char **argv)
                     {
                         printf("less correspondence! *************************************************\n");
                     }
+                    /**
+                     * * corner_point의 개수와 plane_point의 개수가 적으면 less correspondence 출력
+                    */
 
                     TicToc t_solver;
                     ceres::Solver::Options options;
@@ -659,6 +825,7 @@ int main(int argc, char **argv)
 
             // publish odometry
             nav_msgs::Odometry laserOdometry;
+            
             laserOdometry.header.frame_id = "camera_init";
             laserOdometry.child_frame_id = "/laser_odom";
             laserOdometry.header.stamp = ros::Time().fromSec(timeSurfPointsLessFlat);
