@@ -192,7 +192,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
     int cloudSize = laserCloudIn.points.size();
     
-    // 2. Coordinate conversion : ??? -> ???    // 얘 왜 하는지 앎???
+    // 2.
     float startOri = -atan2(laserCloudIn.points[0].y, laserCloudIn.points[0].x);
     float endOri = -atan2(laserCloudIn.points[cloudSize - 1].y,
                           laserCloudIn.points[cloudSize - 1].x) + 2 * M_PI;  // 왜 2pi 더할까
@@ -241,12 +241,10 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                 continue;   // 해당 줄에서 끝나버리고, for문으로 돌아가
             }
         }
-        //// VLP_32 : fov_up : 15, fov_down : -25
+        //// HDL_32 : fov_up : 10, fov_down : -30
         else if (N_SCANS == 32)
         {
-            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             scanID = int((angle + 92.0/3.0) * 3.0 / 4.0);   // 왜 각도가 이렇게 됨??
-            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             if (scanID > (N_SCANS - 1) || scanID < 0)
             {   count--;
                 continue;
@@ -413,9 +411,9 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                     //  and to pick the feature evenly, doesn't use +- 10 index pixel again.
                     // corner로 뽑힌 애는 Picked 1로 바꿔버림
                     cloudNeighborPicked[ind] = 1;
-                    // 뽑힌 edge point 주변, 인접한 point들 간의 차이를 구해서, 별 차이가 없다면(=edge 외 나머지 점들은 상대적으로 flat하다면)
+                    // 뽑힌 edge point 주변, 인접한 point들 간의 거리 차이를 구해서, 별 차이가 없다면(=뽑힌 점과 상대적으로 가깝다면)
                     // 다시 edge로 뽑힐 수 없게 Picked 1로 관리
-                    // 근데 0.05라는 threshold가 왜 나왔는지 잘 모르겠음.
+                    // 근데 0.05라는 threshold는 휴리스틱한 값?
                     for (int l = 1; l <= 5; l++)
                     {
                         float diffX = laserCloud->points[ind + l].x - laserCloud->points[ind + l - 1].x;
@@ -464,7 +462,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
                     // 해당 포인트 사용됐다는 증거 남겨
                     cloudNeighborPicked[ind] = 1;
-                    // 아래 과정에 사용되는 threshold가 edge 뽑을때랑 왜 똑같은지. 그 의미는 무엇인지.
+
                     for (int l = 1; l <= 5; l++)
                     { 
                         float diffX = laserCloud->points[ind + l].x - laserCloud->points[ind + l - 1].x;
