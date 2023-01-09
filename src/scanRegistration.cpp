@@ -130,9 +130,13 @@ void removeClosedPointCloud(const pcl::PointCloud<PointT> &cloud_in,
 /**********************************
 
 Purpose :  
-Input   :  
-Output  :  
-Flow    :  
+Input   :  See each step
+Output  :  See each step
+Flow    :  1. Remove NaN & closed pointcloud
+           2. Coordinate Conversion
+           3. Calculate scanID and assign intensity
+           4. Calculate curvature
+           5. Extract edge and planar features
 Note    :  
 
 **********************************/
@@ -165,9 +169,9 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     removeClosedPointCloud(laserCloudIn, laserCloudIn, MINIMUM_RANGE);
 
 
-    int cloudSize = laserCloudIn.points.size();
     // 2. Coordinate conversion : ??? -> ???
-    float startOri = -atan2(laserCloudIn.points[0].y, laserCloudIn.points[0].x);
+    int cloudSize = laserCloudIn.points.size();
+    float startOri = -atan2(laserCloudIn.points[0].y, lthresaserCloudIn.points[0].x);
     float endOri = -atan2(laserCloudIn.points[cloudSize - 1].y,
                           laserCloudIn.points[cloudSize - 1].x) +
                    2 * M_PI;
@@ -184,11 +188,14 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
     bool halfPassed = false;
     int count = cloudSize;
-    // ******** what is this? ********
+    //? ******** what is this? ********
     PointType point;
-    // ******** how the value of N_SCANS is 16 not 0? ********
+    // laserCloudScans is a vector that contains <pcl::PointCloud<PointType>>
     std::vector<pcl::PointCloud<PointType>> laserCloudScans(N_SCANS);
-    // 3. Calculate scanId and assign intensity for every points
+
+
+
+    // 3. Calculate scanId and assign intensity for every point
     // input  : laserCloudIn point
     // Output : laserCloudScans point has intensity
     for (int i = 0; i < cloudSize; i++)
@@ -202,6 +209,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
         if (N_SCANS == 16)
         {
+            // assign scanID through angle = constrained height?
             scanID = int((angle + 15) / 2 + 0.5);
             if (scanID > (N_SCANS - 1) || scanID < 0)
             {
@@ -277,9 +285,14 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     cloudSize = count;
     printf("points size %d \n", cloudSize);
 
-    pcl::PointCloud<PointType>::Ptr laserCloud(new pcl::PointCloud<PointType>());
+
+
+
     // ******** ??? ********
     // 4-1. Make laserCloud from laserCloudScans & define scanStartInd, scanEndInd
+
+    pcl::PointCloud<PointType>::Ptr laserCloud(new pcl::PointCloud<PointType>());
+    
     for (int i = 0; i < N_SCANS; i++)
     { 
         scanStartInd[i] = laserCloud->size() + 5;
@@ -288,11 +301,13 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     }
 
     printf("prepare time %f \n", t_prepare.toc());
-    // 4-2. Caculate smoothness
+    // 4-2. Calculate smoothness
     // input  :  laserCloud
     // output :  cloudCurvature[i]
     for (int i = 5; i < cloudSize - 5; i++)
-    { 
+    {
+        // ************ ??? ************
+        // does points mean the point of all channels? why they didn't divide into line by line?
         float diffX = laserCloud->points[i - 5].x + laserCloud->points[i - 4].x + laserCloud->points[i - 3].x + laserCloud->points[i - 2].x + laserCloud->points[i - 1].x - 10 * laserCloud->points[i].x + laserCloud->points[i + 1].x + laserCloud->points[i + 2].x + laserCloud->points[i + 3].x + laserCloud->points[i + 4].x + laserCloud->points[i + 5].x;
         float diffY = laserCloud->points[i - 5].y + laserCloud->points[i - 4].y + laserCloud->points[i - 3].y + laserCloud->points[i - 2].y + laserCloud->points[i - 1].y - 10 * laserCloud->points[i].y + laserCloud->points[i + 1].y + laserCloud->points[i + 2].y + laserCloud->points[i + 3].y + laserCloud->points[i + 4].y + laserCloud->points[i + 5].y;
         float diffZ = laserCloud->points[i - 5].z + laserCloud->points[i - 4].z + laserCloud->points[i - 3].z + laserCloud->points[i - 2].z + laserCloud->points[i - 1].z - 10 * laserCloud->points[i].z + laserCloud->points[i + 1].z + laserCloud->points[i + 2].z + laserCloud->points[i + 3].z + laserCloud->points[i + 4].z + laserCloud->points[i + 5].z;
@@ -319,17 +334,19 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     float t_q_sort = 0;
     for (int i = 0; i < N_SCANS; i++)
     {
+        // if the line cannot be divided into 6 subregions,
         if( scanEndInd[i] - scanStartInd[i] < 6)
             continue;
         pcl::PointCloud<PointType>::Ptr surfPointsLessFlatScan(new pcl::PointCloud<PointType>);
         for (int j = 0; j < 6; j++)
-        {   //  ******** ??? ********
-            //  5-1. divide into 6 subregion? not 4?
+        {   //?  5-1. divide into 6 subregion? not 4?
+            // sp = start point, ep = endpoint.
             int sp = scanStartInd[i] + (scanEndInd[i] - scanStartInd[i]) * j / 6; 
             int ep = scanStartInd[i] + (scanEndInd[i] - scanStartInd[i]) * (j + 1) / 6 - 1;
 
             TicToc t_tmp;
-            // sorting : front : high c, rear : low c
+            // sorting : front : low c, rear : high c
+            // if you want to sort structure, you have to add comp.
             std::sort (cloudSortInd + sp, cloudSortInd + ep + 1, comp);
             t_q_sort += t_tmp.toc();
             
@@ -350,6 +367,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                         cornerPointsSharp.push_back(laserCloud->points[ind]);
                         cornerPointsLessSharp.push_back(laserCloud->points[ind]);
                     }
+                    //  hard coding
                     else if (largestPickedNum <= 20)
                     {                        
                         cloudLabel[ind] = 1; 
@@ -390,7 +408,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                 }
             }
 
-            //  5-2. Extract planar features
+            //  5-3. Extract planar features
             int smallestPickedNum = 0;
             for (int k = sp; k <= ep; k++)
             {
@@ -451,7 +469,6 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
         downSizeFilter.setInputCloud(surfPointsLessFlatScan);
         downSizeFilter.setLeafSize(0.2, 0.2, 0.2);
         downSizeFilter.filter(surfPointsLessFlatScanDS);
-
         surfPointsLessFlat += surfPointsLessFlatScanDS;
     }
     printf("sort q time %f \n", t_q_sort);
