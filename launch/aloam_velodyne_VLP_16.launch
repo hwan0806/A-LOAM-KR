@@ -17,6 +17,7 @@
     <node pkg="aloam_velodyne" type="alaserOdometry" name="alaserOdometry" output="screen" />
 
     <node pkg="aloam_velodyne" type="alaserMapping" name="alaserMapping" output="screen" />
+    <node pkg="rosbag" type="play" name="player" output="screen" args="--clock /root/catkin_ws/src/A-LOAM/bag/nsh_indoor_outdoor.bag"/>
 
     <arg name="rviz" default="true" />
     <group if="$(arg rviz)">

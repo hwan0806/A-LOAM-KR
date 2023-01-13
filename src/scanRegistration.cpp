@@ -78,26 +78,32 @@ ros::Publisher pubSurfPointsLessFlat;
 ros::Publisher pubRemovePoints;
 std::vector<ros::Publisher> pubEachScan;
 
-bool PUB_EACH_LINE = false;
+bool PUB_EACH_LINE = false; // VLP 16으로부터 들어온 LiDAR 값을 line by line으로 publish할 지에 관한 파라미터
 
-double MINIMUM_RANGE = 0.1; 
+double MINIMUM_RANGE = 0.1; // 인식된 pointcloud의 생략 거리, 너무 가까우면 걸러낸다. 
+/**********************************
+void removeClosedPointCloud
+Purpose :  LiDAR 센서에 너무 가까운 point를 필터링하기 위함
+Input   :  cloud_in, thres
+Output  :  cloud_out
+**********************************/
 
-template <typename PointT>
-void removeClosedPointCloud(const pcl::PointCloud<PointT> &cloud_in,
-                              pcl::PointCloud<PointT> &cloud_out, float thres)
+template <typename PointT> // template 함수 선언, PointT는 특정 class를 상속받아 일정한 형식이 있는 자료형만 올 수 있음으로 예상된다.
+void removeClosedPointCloud(const pcl::PointCloud<PointT> &cloud_in, // const 참조 변수는 해당 변수명으로 값을 수정할 수 있다.
+                              pcl::PointCloud<PointT> &cloud_out, float thres) // 그냥 참조 변수는 값을 변경할 수 있다.
 {
-    if (&cloud_in != &cloud_out)
+    if (&cloud_in != &cloud_out) // input 변수와 output을 저장할 변수가 다를 경우, timestamp 정보와 size를 동기화하기 위해 사용, robustness
     {
-        cloud_out.header = cloud_in.header;
-        cloud_out.points.resize(cloud_in.points.size());
+        cloud_out.header = cloud_in.header; // 가까운 point 제거 전과 timestamp를 같게 한다.
+        cloud_out.points.resize(cloud_in.points.size()); // 계산을 위한 resize(저장 영역 확보)
     }
 
-    size_t j = 0;
+    size_t j = 0; // size_t 자료형: unsigned int와 동일하지만 운영체제 비트 수에 따라 메모리가 할당
 
     for (size_t i = 0; i < cloud_in.points.size(); ++i)
     {
         if (cloud_in.points[i].x * cloud_in.points[i].x + cloud_in.points[i].y * cloud_in.points[i].y + cloud_in.points[i].z * cloud_in.points[i].z < thres * thres)
-            continue;
+            continue; // 일정 거리보다 가까운 점은 cloud_out에 point를 추가하지 않도록 한다.
         cloud_out.points[j] = cloud_in.points[i];
         j++;
     }
@@ -168,7 +174,9 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
         if (N_SCANS == 16)
         {
-            scanID = int((angle + 15) / 2 + 0.5);
+            scanID = int((angle + 15) / 2 + 0.5); // scanID를 0~15가 나오도록 사용
+            // VLP16의 FOV가 30deg이므로 angle 값은 -15~15의 범위 내에서 나온다.
+            // 이때 -15~15의 범위에 +15를 하여 0~30으로 변환한 뒤 /2를 하여 반올림하면 0~15의 scanID, 즉 몇 번째 Line을 의미하는지를 나타낸다.
             if (scanID > (N_SCANS - 1) || scanID < 0)
             {
                 count--;
@@ -236,7 +244,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
         }
 
         float relTime = (ori - startOri) / (endOri - startOri);
-        point.intensity = scanID + scanPeriod * relTime;
+        point.intensity = scanID + scanPeriod * relTime; // channel 수 + 현재 point의 상대적 위치
         laserCloudScans[scanID].push_back(point); 
     }
     
@@ -294,7 +302,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                 int ind = cloudSortInd[k]; 
 
                 if (cloudNeighborPicked[ind] == 0 &&
-                    cloudCurvature[ind] > 0.1)
+                    cloudCurvature[ind] > 0.1) // smoothness c의 min thres
                 {
 
                     largestPickedNum++;
@@ -483,7 +491,7 @@ int main(int argc, char **argv)
 
     pubCornerPointsLessSharp = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_less_sharp", 100);
 
-    pubSurfPointsFlat = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_flat", 100);
+    pubSurfPointsFlat = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_flat", 100); 
 
     pubSurfPointsLessFlat = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_less_flat", 100);
 
